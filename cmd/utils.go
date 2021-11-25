@@ -137,18 +137,25 @@ func SelectDevfileAlizer(cmd *cobra.Command) (string, string, string) {
 			fmt.Println(err)
 			return "", "", ""
 		}
-		languageAnswer := languages[0].Name
+		
+		langConfirmAnswer := false
+		languageAnswer := ""
+		
+		if len(languages) != 0 {
+			languageAnswer = languages[0].Name
 
-		fmt.Print("Detected ")
-		color.New(color.Bold).Print(languages[0].Name)
-		fmt.Println(" language.")
+			fmt.Print("Detected ")
+			color.New(color.Bold).Print(languageAnswer)
+			fmt.Println(" language.")
 
-		langConfirm := &survey.Confirm{
-			Message: "Is this correct?",
-			Default: true,
+			langConfirm := &survey.Confirm{
+				Message: "Is this correct?",
+				Default: true,
+			}
+			survey.AskOne(langConfirm, &langConfirmAnswer)
+		} else {
+			color.Yellow("Unable to detect language")	
 		}
-		var langConfirmAnswer bool
-		survey.AskOne(langConfirm, &langConfirmAnswer)
 
 		if !langConfirmAnswer {
 			languageQuesion := &survey.Select{
