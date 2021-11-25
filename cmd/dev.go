@@ -23,6 +23,7 @@ Application will be started in a development mode on the cluster.`,
 		color.Green("Starting your application on cluster in developer mode ...")
 		Spinner("Waiting for Kubernetes resources ...", 2) // creates everything on the cluster and waits for contaiers to be ready
 		Spinner("Syncing files into the container ...", 2) // push the files into the container
+		Spinner("Building your application in container on cluster ...", 2)         // start the application
 		Spinner("Execting the application ...", 2)         // start the application
 		color.Magenta("Your application is running on cluster. ")
 		color.New(color.FgMagenta).Print("You can access it at ")

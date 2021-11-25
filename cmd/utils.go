@@ -77,7 +77,7 @@ func Spinner(msg string, timeoutSeconds int) {
 }
 
 // returns devfileName, devfileRegistry, projectName
-func SelectDevfile(cmd *cobra.Command) (string, string, string) {
+func SelectDevfileFromRegistry(cmd *cobra.Command) (string, string, string) {
 
 	registryIndex, err := registryLibrary.GetRegistryIndex("https://registry.devfile.io", false, "", schema.StackDevfileType)
 	if err != nil {
@@ -105,7 +105,7 @@ func SelectDevfile(cmd *cobra.Command) (string, string, string) {
 		var stackAnswerIndex int
 		survey.AskOne(stackQuestion, &stackAnswerIndex)
 
-		projectNameQuestion := &survey.Input{Message: "Your project's name?"}
+		projectNameQuestion := &survey.Input{Message: "What will be your application's name?"}
 		var projectNameAnswer string
 		survey.AskOne(projectNameQuestion, &projectNameAnswer)
 
@@ -137,10 +137,10 @@ func SelectDevfileAlizer(cmd *cobra.Command) (string, string, string) {
 			fmt.Println(err)
 			return "", "", ""
 		}
-		
+
 		langConfirmAnswer := false
 		languageAnswer := ""
-		
+
 		if len(languages) != 0 {
 			languageAnswer = languages[0].Name
 
@@ -154,7 +154,7 @@ func SelectDevfileAlizer(cmd *cobra.Command) (string, string, string) {
 			}
 			survey.AskOne(langConfirm, &langConfirmAnswer)
 		} else {
-			color.Yellow("Unable to detect language")	
+			color.Yellow("Unable to detect language")
 		}
 
 		if !langConfirmAnswer {
@@ -170,16 +170,90 @@ func SelectDevfileAlizer(cmd *cobra.Command) (string, string, string) {
 		var projectTypeAnswer string
 		survey.AskOne(projectTypeQuestion, &projectTypeAnswer)
 
-		projectNameQuestion := &survey.Input{Message: "What will be the application name?"}
+		projectNameQuestion := &survey.Input{Message: "What will be the application's name?"}
 		var projectNameAnswer string
 		survey.AskOne(projectNameQuestion, &projectNameAnswer)
 
 		projectName = projectNameAnswer
 		devfileName = fmt.Sprintf("%s-%s", languageAnswer, projectTypeAnswer)
 
+		ConfigureDevfile()
+
 	}
 
 	return devfileName, devfileRegistry, projectName
+}
+
+func ConfigureDevfile() {
+	//begin: // label for goto
+
+	color.New(color.Bold, color.FgGreen).Println("Current Devfile configuration:")
+	color.Green("Opened ports:")
+	color.New(color.Bold, color.FgWhite).Println(" - 8080")
+	color.New(color.Bold, color.FgWhite).Println(" - 8084")
+	color.Green("Environemnt variables:")
+	color.New(color.Bold, color.FgWhite).Println(" - FOO=BAR")
+	color.New(color.Bold, color.FgWhite).Println(" - FOO1=BAR")
+
+	var confirmAnswer bool
+	confirmQuestion := &survey.Confirm{
+		Message: "Do you want to change any of this configuration?",
+		Default: false,
+	}
+	survey.AskOne(confirmQuestion, &confirmAnswer)
+
+	var configChangeAnswer string
+	for configChangeAnswer != "NOTHING" {
+		configChangeQuestion := &survey.Select{
+			Message: "Which configuration do you want to change?",
+			Options: []string{"Opened ports", "Environemnt variables", "NOTHING"},
+		}
+		survey.AskOne(configChangeQuestion, &configChangeAnswer)
+
+		switch configChangeAnswer {
+		case "Opened ports":
+
+			var actionAnswer string
+			
+			for actionAnswer != "GO BACK" {
+			actionQuestion := &survey.Select{
+				Message: "What do you want to do?",
+				Options: []string{"Add port", "Delete port", "GO BACK"},
+			}
+			survey.AskOne(actionQuestion, &actionAnswer)
+				switch actionAnswer {
+				case "Add port":
+					var portAnswer string
+					portQuestion := &survey.Input{
+						Message: "New port number?",
+					}
+					survey.AskOne(portQuestion, &portAnswer)
+
+					var portNameAnswer string
+					portNameQuestion := &survey.Input{
+						Message: "New port name?",
+					}
+					survey.AskOne(portNameQuestion, &portNameAnswer)
+				case "Delete port":
+					var portNumberAnswer string
+					portNumberQuesion := &survey.Select{
+						Message: "Which port do you want to delete?",
+						Options: []string{"8080", "8084", "GO BACK"},
+					}
+					survey.AskOne(portNumberQuesion, &portNumberAnswer)
+				case "GO BACK":
+					break
+				}
+			}
+
+		case "Environemnt variables":
+			fmt.Println("Not implemented yet")
+		case "NOTHING":
+			break
+		}
+
+	}
+
 }
 
 func DownloadDevfile(devfileName string, devfileRegistry string, projectName string) {

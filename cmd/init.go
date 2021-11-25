@@ -20,7 +20,7 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		devfileName, devfileRegistry, projectName := SelectDevfile(cmd)
+		devfileName, devfileRegistry, projectName := SelectDevfileFromRegistry(cmd)
 
 		var starterAnswer string
 		hasFlagsSet := HasFlagsSet(cmd)
