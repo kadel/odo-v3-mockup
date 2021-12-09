@@ -34,8 +34,8 @@ It works in 3 steps:
 	Run: func(cmd *cobra.Command, args []string) {
 		if _, err := os.Stat("devfile.yaml"); os.IsNotExist(err) {
 			color.Green("There is no devfile.yaml in the current directory.")
-			devfileName, devfileRegistry, projectName := SelectDevfileAlizer(cmd)
-			DownloadDevfile(devfileName, devfileRegistry, projectName)
+			devfile, devfileRegistry, projectName := SelectDevfileAlizer(cmd)
+			DownloadDevfile(devfile, devfileRegistry, projectName, "")
 		} else {
 			color.Green("Using devfile.yaml from the current directory.")
 		}

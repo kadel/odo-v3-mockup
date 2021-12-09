@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -20,23 +19,10 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		devfileName, devfileRegistry, projectName := SelectDevfileFromRegistry(cmd)
+		//devfile, devfileRegistry, projectName := SelectDevfileFromRegistry(cmd)
+		devfile, devfileRegistry, componentName, starterName := SelectDevfile(cmd, true)
 
-		var starterAnswer string
-		hasFlagsSet := HasFlagsSet(cmd)
-		if !hasFlagsSet {
-			starterQuestion := &survey.Select{
-				Message: "Which starter project do you wan to use?",
-				Options: []string{"NO STARTER", "starter1", "starter2"}}
-			survey.AskOne(starterQuestion, &starterAnswer)
-
-		}
-
-		DownloadDevfile(devfileName, devfileRegistry, projectName)
-
-		if (starterAnswer != "NO STARTER" && !hasFlagsSet) || (cmd.Flag("starter").Value.String() != "" && hasFlagsSet) {
-			Spinner("Downloading starter project ...", 2)
-		}
+		DownloadDevfile(devfile, devfileRegistry, componentName, starterName)
 
 		color.Green("Your new Devfile project is ready in the current directory")
 	},

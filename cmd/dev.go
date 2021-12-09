@@ -16,15 +16,15 @@ Application will be started in a development mode on the cluster.`,
 		if _, err := os.Stat("devfile.yaml"); os.IsNotExist(err) {
 			color.Green("There is no devfile.yaml in the current directory.")
 			devfileName, devfileRegistry, projectName := SelectDevfileAlizer(cmd)
-			DownloadDevfile(devfileName, devfileRegistry, projectName)
+			DownloadDevfile(devfileName, devfileRegistry, projectName, "")
 		} else {
 			color.Green("Using devfile.yaml from the current directory.")
 		}
 		color.Green("Starting your application on cluster in developer mode ...")
-		Spinner("Waiting for Kubernetes resources ...", 2) // creates everything on the cluster and waits for contaiers to be ready
-		Spinner("Syncing files into the container ...", 2) // push the files into the container
-		Spinner("Building your application in container on cluster ...", 2)         // start the application
-		Spinner("Execting the application ...", 2)         // start the application
+		Spinner("Waiting for Kubernetes resources ...", 2)                  // creates everything on the cluster and waits for contaiers to be ready
+		Spinner("Syncing files into the container ...", 2)                  // push the files into the container
+		Spinner("Building your application in container on cluster ...", 2) // start the application
+		Spinner("Execting the application ...", 2)                          // start the application
 		color.Magenta("Your application is running on cluster. ")
 		color.New(color.FgMagenta).Print("You can access it at ")
 		color.New(color.FgMagenta).Add(color.Underline).Println("https://example.com")
