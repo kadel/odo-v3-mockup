@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -88,7 +90,7 @@ func SelectDevfileAlizer(cmd *cobra.Command) (indexSchema.Schema, string, string
 			languageAnswer = AskLangage(devfileRegistry)
 		}
 
-		devfile = AskProjectType(languageAnswer, devfileRegistry)
+		devfile = AskProjectType(strings.ToLower(languageAnswer), devfileRegistry)
 		componentName = AskComponentName(fmt.Sprintf("my%s", languageAnswer))
 
 		ConfigureDevfile()
@@ -97,73 +99,103 @@ func SelectDevfileAlizer(cmd *cobra.Command) (indexSchema.Schema, string, string
 
 	return devfile, devfileRegistryUrl, componentName
 }
+func PrintConfiguration(ports []string, envs map[string]string) {
+	color.New(color.Bold, color.FgGreen).Println("Current component configuration:")
+
+	color.Green("Opened ports:")
+	for _, port := range ports {
+
+		color.New(color.Bold, color.FgWhite).Printf(" - %s\n", port)
+	}
+
+	color.Green("Environment variables:")
+	for key, value := range envs {
+		color.New(color.Bold, color.FgWhite).Printf(" - %s = %s\n", key, value)
+	}
+}
 
 func ConfigureDevfile() {
-	//begin: // label for goto
 
-	color.New(color.Bold, color.FgGreen).Println("Current Devfile configuration:")
-	color.Green("Opened ports:")
-	color.New(color.Bold, color.FgWhite).Println(" - 8080")
-	color.New(color.Bold, color.FgWhite).Println(" - 8084")
-	color.Green("Environemnt variables:")
-	color.New(color.Bold, color.FgWhite).Println(" - FOO=BAR")
-	color.New(color.Bold, color.FgWhite).Println(" - FOO1=BAR")
-
-	var confirmAnswer bool
-	confirmQuestion := &survey.Confirm{
-		Message: "Do you want to change any of this configuration?",
-		Default: false,
+	ports := []string{
+		"8080",
+		"8084",
 	}
-	survey.AskOne(confirmQuestion, &confirmAnswer)
+	envs := map[string]string{
+		"FOO":  "bar",
+		"FOO1": "bar1",
+	}
 
 	var configChangeAnswer string
-	for configChangeAnswer != "NOTHING" {
+	for configChangeAnswer != "NOTHING - configuration is correct" {
+		PrintConfiguration(ports, envs)
+
+		options := []string{
+			"NOTHING - configuration is correct",
+		}
+		for _, port := range ports {
+			options = append(options, fmt.Sprintf("Delete port %q", port))
+		}
+		options = append(options, "Add new port")
+
+		for key := range envs {
+			options = append(options, fmt.Sprintf("Delete environment variable %q", key))
+		}
+		options = append(options, "Add new environment variable")
+
 		configChangeQuestion := &survey.Select{
-			Message: "Which configuration do you want to change?",
-			Options: []string{"Opened ports", "Environemnt variables", "NOTHING"},
+			Message: "What configuration do you want change?",
+			Default: options[0],
+			Options: options,
 		}
 		survey.AskOne(configChangeQuestion, &configChangeAnswer)
 
-		switch configChangeAnswer {
-		case "Opened ports":
+		if strings.HasPrefix(configChangeAnswer, "Delete port") {
+			re := regexp.MustCompile("\"(.*?)\"")
+			match := re.FindStringSubmatch(configChangeAnswer)
+			portToDelete := match[1]
 
-			var actionAnswer string
-
-			for actionAnswer != "GO BACK" {
-				actionQuestion := &survey.Select{
-					Message: "What do you want to do?",
-					Options: []string{"Add port", "Delete port", "GO BACK"},
-				}
-				survey.AskOne(actionQuestion, &actionAnswer)
-				switch actionAnswer {
-				case "Add port":
-					var portAnswer string
-					portQuestion := &survey.Input{
-						Message: "New port number?",
-					}
-					survey.AskOne(portQuestion, &portAnswer)
-
-					var portNameAnswer string
-					portNameQuestion := &survey.Input{
-						Message: "New port name?",
-					}
-					survey.AskOne(portNameQuestion, &portNameAnswer)
-				case "Delete port":
-					var portNumberAnswer string
-					portNumberQuesion := &survey.Select{
-						Message: "Which port do you want to delete?",
-						Options: []string{"8080", "8084", "GO BACK"},
-					}
-					survey.AskOne(portNumberQuesion, &portNumberAnswer)
-				case "GO BACK":
-					break
+			indexToDelete := -1
+			for i, port := range ports {
+				if port == portToDelete {
+					indexToDelete = i
 				}
 			}
+			if indexToDelete == -1 {
+				panic(fmt.Sprintf("unable to delete port %q, not found", portToDelete))
+			}
+			ports = append(ports[:indexToDelete], ports[indexToDelete+1:]...)
 
-		case "Environemnt variables":
-			fmt.Println("Not implemented yet")
-		case "NOTHING":
-			break
+		} else if strings.HasPrefix(configChangeAnswer, "Delete environment variable") {
+			re := regexp.MustCompile("\"(.*?)\"")
+			match := re.FindStringSubmatch(configChangeAnswer)
+			envToDelete := match[1]
+			if _, ok := envs[envToDelete]; !ok {
+				panic(fmt.Sprintf("unable to delete env %q, not found", envToDelete))
+			}
+			delete(envs, envToDelete)
+		} else if configChangeAnswer == "NOTHING - configuration is correct" {
+			// nothing to do
+		} else if configChangeAnswer == "Add new port" {
+			newPortQuestion := &survey.Input{
+				Message: "Enter port number:",
+			}
+			var newPortAnswer string
+			survey.AskOne(newPortQuestion, &newPortAnswer)
+			ports = append(ports, newPortAnswer)
+		} else if configChangeAnswer == "Add new environment variable" {
+			newEnvNameQuesion := &survey.Input{
+				Message: "Enter new environment variable name:",
+			}
+			var newEnvNameAnswer string
+			survey.AskOne(newEnvNameQuesion, &newEnvNameAnswer)
+			newEnvValueQuestion := &survey.Input{
+				Message: fmt.Sprintf("Enter value for %q environment variable:", newEnvNameAnswer),
+			}
+			var newEnvValueAnswer string
+			survey.AskOne(newEnvValueQuestion, &newEnvValueAnswer)
+			envs[newEnvNameAnswer] = newEnvValueAnswer
+		} else {
+			panic(fmt.Sprintf("Unknown configuration selected %q", configChangeAnswer))
 		}
 
 	}
@@ -178,7 +210,6 @@ func DownloadDevfile(devfile indexSchema.Schema, devfileRegistry string, compone
 	if starterName != "" {
 		Spinner(fmt.Sprintf("Downloading starter project %q ...", starterName), 2)
 	}
-	fmt.Printf("Your new component %q is ready in the current directory.\n", componentName)
 
 	CreateDevfile()
 }

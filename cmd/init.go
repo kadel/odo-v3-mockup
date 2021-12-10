@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -15,7 +16,7 @@ var initCmd = &cobra.Command{
 
 		if !IsCurrentDirEmpty() {
 			color.Red("Current directory is not empty. You can bootstrap new application only in empty directory.")
-			color.Green("If you have existing code that you want to deploy use `%s deploy` or `%s dev` commands.", os.Args[0], os.Args[0])
+			color.Green("If you have existing code that you want to deploy use `%s deploy` or use `%s dev` command to quickly iterate on your application.", os.Args[0], os.Args[0])
 			os.Exit(1)
 		}
 
@@ -24,7 +25,10 @@ var initCmd = &cobra.Command{
 
 		DownloadDevfile(devfile, devfileRegistry, componentName, starterName)
 
-		color.Green("Your new Devfile project is ready in the current directory")
+		color.Green("Your new component %q is ready in the current directory.\n", componentName)
+		fmt.Println("To start editing your project, use “odo dev” and open this folder in your favorite IDE.")
+		fmt.Println("Changes will be directly reflected on the cluster.")
+		fmt.Println("To deploy your application to your cluster use “odo deploy”.")
 	},
 }
 

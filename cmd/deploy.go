@@ -39,11 +39,11 @@ It works in 3 steps:
 		} else {
 			color.Green("Using devfile.yaml from the current directory.")
 		}
-		color.Green("Deploying your cluster to cluster ...")
-		Spinner("Building container image ...", 2)
+		color.Green("Deploying your component to cluster ...")
+		Spinner("Building container image locally ...", 2)
 		Spinner("Pushing image to container registry ...", 2)
 		Spinner("Waiting for Kubernetes resources ...", 2) // creates everything on the cluster and waits for contaiers to be ready
-		color.Magenta("Your application is running on cluster. ")
+		color.Magenta("Your component is running on cluster. ")
 		color.New(color.FgMagenta).Print("You can access it at ")
 		color.New(color.FgMagenta).Add(color.Underline).Println("https://example.com")
 	},

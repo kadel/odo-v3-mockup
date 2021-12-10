@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -28,6 +29,14 @@ Application will be started in a development mode on the cluster.`,
 		color.Magenta("Your application is running on cluster. ")
 		color.New(color.FgMagenta).Print("You can access it at ")
 		color.New(color.FgMagenta).Add(color.Underline).Println("https://example.com")
+		fmt.Println("")
+
+		Spinner("Watching for changes in the current directory ...", 5)
+		fmt.Println("Change in main.java detected.")
+		Spinner("Syncing files into the container ...", 2)
+		Spinner("Reloading application ...", 2)
+		Spinner("Watching for changes in the current directory ...", 60)
+
 	},
 }
 
