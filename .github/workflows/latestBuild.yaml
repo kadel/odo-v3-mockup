@@ -19,8 +19,9 @@ jobs:
         run: ./cross-compile.sh
       - name: delete old "latest" release
         run: |
-          gh release delete latest -y
-          git push origin :latest
+          gh release delete latest -y || true
+          git tag -f latest
+          git push --force origin latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: create release
