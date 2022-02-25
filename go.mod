@@ -1,4 +1,4 @@
-module github.com/kadel/odo-v3-prototype
+module github.com/kadel/odo-v3-mockup
 
 go 1.17
 
@@ -8,7 +8,9 @@ require (
 	github.com/devfile/registry-support/index/generator v0.0.0-20220209160145-723fa9c18e65
 	github.com/fatih/color v1.13.0
 	github.com/kadel/devfile-utils v0.0.0-20220215132357-184a57225b9d
+	github.com/mattn/go-runewidth v0.0.9
 	github.com/redhat-developer/alizer/go v0.0.0-20220204121940-dec463ed3af3
+	github.com/rodaine/table v1.0.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
 )

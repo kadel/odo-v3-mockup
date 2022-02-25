@@ -60,7 +60,7 @@ func SelectDevfileAlizer(cmd *cobra.Command) (indexSchema.Schema, string, string
 		devfileRegistry := registry.NewIndex(devfileRegistryUrl)
 		devfile = *devfileRegistry.GetDevfileByName(devfileName)
 	} else {
-		color.New(color.Italic, color.FgGreen).Println("Current directory already contains source code.")
+		color.New(color.Italic, color.FgGreen).Println("The current directory already contains source code.")
 		color.New(color.Italic, color.Bold, color.FgGreen).Println("Odo will try to autodetect language and project type to select best suited Devfile for your project.")
 		devfileRegistry := registry.NewIndex(devfileRegistryUrl)
 
@@ -333,7 +333,8 @@ func SelectDevfile(cmd *cobra.Command, askForStarter bool) (indexSchema.Schema, 
 	} else {
 		devfileRegistry := registry.NewIndex(devfileRegistryUrl)
 
-		color.New(color.Italic, color.FgGreen).Println("Current directory is empty. You can create a new component using a starter project to easily start new project.")
+		color.New(color.Italic, color.FgGreen).Println("The current directory is empty.")
+		color.New(color.Italic, color.Bold, color.FgGreen).Println("You can create a new component using a starter project to easily start new project.")
 
 		languageAnswer := AskLangage(devfileRegistry)
 

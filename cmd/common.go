@@ -27,14 +27,6 @@ func HasFlagsSet(cmd *cobra.Command) bool {
 	return hasFlagsSet
 }
 
-// addCommonFlags adds flags that are used to download devfile from registry
-func addCommonDevfileFlags(cmd *cobra.Command) {
-	cmd.Flags().String("name", "", "Name of the component")
-	cmd.Flags().String("devfile", "", "Name of the devfile in Devfile registr")
-	cmd.Flags().String("devfile-path", "", "Path to the devfile in local filesystem, or URL to remote devfile")
-	cmd.Flags().String("registry-url", "defaultRegistry", "Url of the devfile registry to download devfile from")
-}
-
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {

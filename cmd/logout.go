@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/kadel/odo-v3-prototype/pretty"
+	"github.com/kadel/odo-v3-mockup/pretty"
 	"github.com/spf13/cobra"
 )
 

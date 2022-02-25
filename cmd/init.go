@@ -35,8 +35,11 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	addCommonDevfileFlags(initCmd)
-	initCmd.Flags().String("starter", "", "Name of the devfile starter project to populate the current directory with")
+	initCmd.Flags().String("devfile-path", "", "Path to a devfile. It can be local filesystem path or http(s). This is alternative to using devfile from Devfile registry.")
+	initCmd.Flags().String("devfile", "", "Name of the Devfile from the Devfile registry (required if --devfile-path is not defined)")
+	initCmd.Flags().String("registry", "", "name of the devfile registry (as configured in odo preference registry). It can be used in combination with --devfile, but not with --devfile-paths")
+	initCmd.Flags().String("name", "", "Name of the new component. If not specified, the name will be the name of the current directory.")
+	initCmd.Flags().String("starter", "", "Name of the devfile starter project to populate the current directory with.")
 
 	rootCmd.AddCommand(initCmd)
 }
