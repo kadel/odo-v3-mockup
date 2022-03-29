@@ -7,7 +7,68 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
+	sbo "github.com/redhat-developer/service-binding-operator/apis/binding/v1alpha1"
 )
+
+//oc get bindablekinds  bindable-kinds -o yaml
+var bindableKinds = `
+apiVersion: binding.operators.coreos.com/v1alpha1
+kind: BindableKinds
+metadata:
+  creationTimestamp: "2022-03-29T12:24:54Z"
+  generation: 5
+  name: bindable-kinds
+  resourceVersion: "65077"
+  uid: f8ebc579-2d06-464b-aaac-fde7a33286bc
+status:
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1alpha1
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-3-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-5-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-8-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-4-0
+- group: redis.redis.opstreelabs.in
+  kind: Redis
+  version: v1beta1
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-1-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-11-0
+- group: postgres-operator.crunchydata.com
+  kind: PostgresCluster
+  version: v1beta1
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-9-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-7-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-6-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-2-0
+- group: psmdb.percona.com
+  kind: PerconaServerMongoDB
+  version: v1-10-0
+`
 
 // kubectl api-resources --verbs=list --namespaced  > api-resources.txt
 // remove NAME,SHORTNAMES,NAMESPACED columns using vim visual mode
@@ -104,11 +165,63 @@ var createBinding = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var serviceBindingNameAnswer string
 
+		var bk sbo.BindableKinds
+
+		err := yaml.Unmarshal([]byte(bindableKinds), &bk)
+		if err != nil {
+			panic(err)
+		}
+
 		if !HasFlagsSet(cmd) {
 			serviceBindingName := &survey.Input{
 				Message: "What will be the ServiceBinding's name?:",
 			}
 			survey.AskOne(serviceBindingName, &serviceBindingNameAnswer, survey.WithValidator(survey.Required))
+
+			fmt.Println(bk)
+
+			bkOptions := []string{}
+
+			for _, bks := range bk.Status {
+				bkOptions = append(bkOptions, fmt.Sprintf("%s %s %s", bks.Kind, bks.Group, bks.Version))
+			}
+
+			bindableKindQuestion := &survey.Select{
+				Message: "Select service type you want to bind to:",
+				Options: bkOptions,
+			}
+			var bindableKindAnswer string
+			survey.AskOne(bindableKindQuestion, &bindableKindAnswer)
+
+			// color.New(color.Bold).Println("\nService part of the ServiceBinding")
+
+			// serviceNamespace := &survey.Select{
+			// 	Message: "In which namespace is the service?",
+			// 	Options: []string{"namespace1", "namespace2"},
+			// }
+			// var serviceNamespaceAnswer string
+			// survey.AskOne(serviceNamespace, &serviceNamespaceAnswer)
+
+			// serviceResource := &survey.Select{
+			// 	Message: "What is Kind of your service?",
+			// 	Options: apiResources,
+			// }
+			// var serviceResourceAnswer string
+			// survey.AskOne(serviceResource, &serviceResourceAnswer)
+
+			// resourceName := &survey.Select{
+			// 	Message: fmt.Sprintf("What is %q name?:", serviceResourceAnswer),
+			// 	Options: []string{"DOES NOT EXISTS YET", "myservice", "myotherserivce"},
+			// }
+			// var resourceNameAnswer string
+			// survey.AskOne(resourceName, &resourceNameAnswer)
+
+			// if resourceNameAnswer == "DOES NOT EXISTS YET" {
+			// 	nonExistinResourceName := &survey.Input{
+			// 		Message: fmt.Sprintf("What will be %q name?:", serviceResourceAnswer),
+			// 	}
+			// 	survey.AskOne(nonExistinResourceName, &resourceNameAnswer, survey.WithValidator(survey.Required))
+			// }
 
 			color.New(color.Bold).Println("\nApplication part of the ServiceBinding")
 
@@ -147,36 +260,6 @@ var createBinding = &cobra.Command{
 				}
 			} else {
 				color.Blue("Application from Devfile will be used as a ServiceBinding Application")
-			}
-
-			color.New(color.Bold).Println("\nService part of the ServiceBinding")
-
-			serviceNamespace := &survey.Select{
-				Message: "In which namespace is the service?",
-				Options: []string{"namespace1", "namespace2"},
-			}
-			var serviceNamespaceAnswer string
-			survey.AskOne(serviceNamespace, &serviceNamespaceAnswer)
-
-			serviceResource := &survey.Select{
-				Message: "What is Kind of your service?",
-				Options: apiResources,
-			}
-			var serviceResourceAnswer string
-			survey.AskOne(serviceResource, &serviceResourceAnswer)
-
-			resourceName := &survey.Select{
-				Message: fmt.Sprintf("What is %q name?:", serviceResourceAnswer),
-				Options: []string{"DOES NOT EXISTS YET", "myservice", "myotherserivce"},
-			}
-			var resourceNameAnswer string
-			survey.AskOne(resourceName, &resourceNameAnswer)
-
-			if resourceNameAnswer == "DOES NOT EXISTS YET" {
-				nonExistinResourceName := &survey.Input{
-					Message: fmt.Sprintf("What will be %q name?:", serviceResourceAnswer),
-				}
-				survey.AskOne(nonExistinResourceName, &resourceNameAnswer, survey.WithValidator(survey.Required))
 			}
 
 			color.New(color.Bold).Println("\nGeneric ServiceBinding attributes")
