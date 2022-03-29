@@ -183,7 +183,7 @@ var createBinding = &cobra.Command{
 			bkOptions := []string{}
 
 			for _, bks := range bk.Status {
-				bkOptions = append(bkOptions, fmt.Sprintf("%s %s %s", bks.Kind, bks.Group, bks.Version))
+				bkOptions = append(bkOptions, fmt.Sprintf("%s (%s)", bks.Kind, bks.Group))
 			}
 
 			bindableKindQuestion := &survey.Select{
