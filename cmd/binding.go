@@ -1,74 +1,24 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
-
 	sbo "github.com/redhat-developer/service-binding-operator/apis/binding/v1alpha1"
+	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
-
-//oc get bindablekinds  bindable-kinds -o yaml
-var bindableKinds = `
-apiVersion: binding.operators.coreos.com/v1alpha1
-kind: BindableKinds
-metadata:
-  creationTimestamp: "2022-03-29T12:24:54Z"
-  generation: 5
-  name: bindable-kinds
-  resourceVersion: "65077"
-  uid: f8ebc579-2d06-464b-aaac-fde7a33286bc
-status:
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1alpha1
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-3-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-5-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-8-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-4-0
-- group: redis.redis.opstreelabs.in
-  kind: Redis
-  version: v1beta1
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-1-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-11-0
-- group: postgres-operator.crunchydata.com
-  kind: PostgresCluster
-  version: v1beta1
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-9-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-7-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-6-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-2-0
-- group: psmdb.percona.com
-  kind: PerconaServerMongoDB
-  version: v1-10-0
-`
 
 // kubectl api-resources --verbs=list --namespaced  > api-resources.txt
 // remove NAME,SHORTNAMES,NAMESPACED columns using vim visual mode
@@ -165,30 +115,95 @@ var createBinding = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var serviceBindingNameAnswer string
 
-		var bk sbo.BindableKinds
-
-		err := yaml.Unmarshal([]byte(bindableKinds), &bk)
-		if err != nil {
-			panic(err)
-		}
+		namespace := "test"
 
 		if !HasFlagsSet(cmd) {
-			serviceBindingName := &survey.Input{
-				Message: "What will be the ServiceBinding's name?:",
+
+			home := homedir.HomeDir()
+			kubeconfig := filepath.Join(home, ".kube", "config")
+
+			config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+			if err != nil {
+				panic(err)
 			}
-			survey.AskOne(serviceBindingName, &serviceBindingNameAnswer, survey.WithValidator(survey.Required))
 
-			fmt.Println(bk)
+			dynamicClient, err := dynamic.NewForConfig(config)
+			if err != nil {
+				panic(err)
+			}
 
-			bkOptions := []string{}
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+			if err != nil {
+				panic(err)
+			}
 
-			for _, bks := range bk.Status {
-				bkOptions = append(bkOptions, fmt.Sprintf("%s (%s)", bks.Kind, bks.Group))
+			groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
+			if err != nil {
+				panic(err)
+			}
+			mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+
+			// get bindable kinds from cluster
+			var bindableKinds sbo.BindableKinds
+			bindableRes := schema.GroupVersionResource{Group: "binding.operators.coreos.com", Version: "v1alpha1", Resource: "bindablekinds"}
+			bkUnstructured, err := dynamicClient.Resource(bindableRes).Get(context.TODO(), "bindable-kinds", metav1.GetOptions{})
+			if err != nil {
+				panic(err)
+			}
+			err = runtime.DefaultUnstructuredConverter.FromUnstructured(bkUnstructured.UnstructuredContent(), &bindableKinds)
+			if err != nil {
+				panic(err)
+			}
+
+			// store bindable objects (this is existing operator service instance that is bindable)
+			type bindableObjects struct {
+				Name     string
+				Gvk      schema.GroupVersionKind
+				Resource string
+			}
+			bos := []bindableObjects{}
+
+			for _, bks := range bindableKinds.Status {
+
+				// check every GroupKind only once
+				gkAlreadyAdded := false
+				for _, bo := range bos {
+					if bo.Gvk.Group == bks.Group && bo.Gvk.Kind == bks.Kind {
+						gkAlreadyAdded = true
+						continue
+					}
+				}
+				if gkAlreadyAdded {
+					continue
+				}
+
+				// convert Kind retrived from bindable kinds to Resource for use in dynamicClient
+				gvk := schema.GroupVersionKind{Group: bks.Group, Version: bks.Version, Kind: bks.Kind}
+				mapping, err := mapper.RESTMapping(gvk.GroupKind())
+				if err != nil {
+					panic(err)
+				}
+
+				result, err := dynamicClient.Resource(mapping.Resource).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
+				if err != nil {
+					// don't fail if there is an error
+					fmt.Println(err)
+				}
+
+				for _, r := range result.Items {
+					bos = append(bos, bindableObjects{Name: r.GetName(), Gvk: r.GroupVersionKind()})
+				}
+
+			}
+
+			bindableResourcesOptions := []string{}
+			for _, br := range bos {
+				bindableResourcesOptions = append(bindableResourcesOptions, fmt.Sprintf("%s (%s)", br.Name, br.Gvk.GroupKind().String()))
 			}
 
 			bindableKindQuestion := &survey.Select{
-				Message: "Select service type you want to bind to:",
-				Options: bkOptions,
+				Message: "Select service instance you want to bind to:",
+				Options: bindableResourcesOptions,
 			}
 			var bindableKindAnswer string
 			survey.AskOne(bindableKindQuestion, &bindableKindAnswer)
@@ -223,15 +238,15 @@ var createBinding = &cobra.Command{
 			// 	survey.AskOne(nonExistinResourceName, &resourceNameAnswer, survey.WithValidator(survey.Required))
 			// }
 
-			color.New(color.Bold).Println("\nApplication part of the ServiceBinding")
+			//color.New(color.Bold).Println("\nApplication part of the ServiceBinding")
 
 			var forDevfileAppAnswer string
 			if _, err := os.Stat("devfile.yaml"); !os.IsNotExist(err) {
-				forDevfileApp := &survey.Select{
-					Message: "Do you want to create ServiceBinding for your Devfile application or for other Kubernetes resource?",
-					Options: []string{"Devfile application", "Other Kubernetes resource"},
-				}
-				survey.AskOne(forDevfileApp, &forDevfileAppAnswer)
+				// forDevfileApp := &survey.Select{
+				//  Message: "Do you want to create ServiceBinding for your Devfile application or for other Kubernetes resource?",
+				//  Options: []string{"Devfile application", "Other Kubernetes resource"},
+				// }
+				// survey.AskOne(forDevfileApp, &forDevfileAppAnswer)
 			} else {
 				forDevfileAppAnswer = "Other Kubernetes resource"
 			}
@@ -260,7 +275,14 @@ var createBinding = &cobra.Command{
 				}
 			} else {
 				color.Blue("Application from Devfile will be used as a ServiceBinding Application")
+				fmt.Println("Deployment: myapp")
 			}
+
+			serviceBindingName := &survey.Input{
+				Message: "What will be the ServiceBinding's name?:",
+				Default: fmt.Sprintf("%s-%s", "myapp", "servicename"),
+			}
+			survey.AskOne(serviceBindingName, &serviceBindingNameAnswer, survey.WithValidator(survey.Required))
 
 			color.New(color.Bold).Println("\nGeneric ServiceBinding attributes")
 			bindAsFiles := &survey.Confirm{
@@ -278,23 +300,22 @@ var createBinding = &cobra.Command{
 			survey.AskOne(detectBindingResources, &detectBindingResourcesAnswer)
 		}
 
-		whatToDoOptions := []string{"create it on cluster", "display it"}
-		whatToDoDefault := []string{"display it", "create it on cluster"}
+		whatToDoOptions := []string{"create it on cluster", "display it", "save to file"}
+		whatToDoDefault := []string{"display it"}
+		whatToDoAnswer := []string{}
 
 		if _, err := os.Stat("devfile.yaml"); !os.IsNotExist(err) {
-			whatToDoOptions = append(whatToDoOptions, "save to devfile.yaml")
-			whatToDoDefault = append(whatToDoDefault, "save to devfile.yaml")
-		} else {
-			whatToDoOptions = append(whatToDoOptions, "save to file")
-		}
+			color.Green("The ServiceBinding was saved as kubernetes/binding-request.yaml and added to devfile.yaml")
 
-		whatToDo := &survey.MultiSelect{
-			Message: "What to do with generated ServiceBinding?",
-			Options: whatToDoOptions,
-			Default: whatToDoDefault,
+		} else {
+			whatToDo := &survey.MultiSelect{
+				Message: "What to do with generated ServiceBinding?",
+				Options: whatToDoOptions,
+				Default: whatToDoDefault,
+			}
+			survey.AskOne(whatToDo, &whatToDoAnswer)
+
 		}
-		whatToDoAnswer := []string{}
-		survey.AskOne(whatToDo, &whatToDoAnswer)
 
 		// todo ask for filename fi if needed
 

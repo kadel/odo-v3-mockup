@@ -14,7 +14,8 @@ require (
 	github.com/rodaine/table v1.0.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	k8s.io/apimachinery v0.22.1
+	k8s.io/client-go v0.22.1
 )
 
 require (
@@ -71,10 +72,9 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/api v0.22.1 // indirect
 	k8s.io/apiextensions-apiserver v0.22.1 // indirect
-	k8s.io/apimachinery v0.22.1 // indirect
-	k8s.io/client-go v0.22.1 // indirect
 	k8s.io/component-base v0.22.1 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
