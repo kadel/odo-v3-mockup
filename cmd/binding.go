@@ -8,7 +8,9 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/fatih/color"
+	"github.com/mattn/go-runewidth"
 	sbo "github.com/redhat-developer/service-binding-operator/apis/binding/v1alpha1"
+	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -370,15 +372,91 @@ and usage of using your command`,
 	},
 }
 
+var describeBinding = &cobra.Command{
+	Use:   "binding",
+	Short: "",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		if contains(args, "myapp-mymongo") {
+			color.New(color.FgGreen).Print("Service Binding Name: ")
+			color.New(color.FgBlue).Println("myapp-mymongo")
+
+			color.New(color.FgGreen).Print("Service: ")
+			fmt.Println("mymongo (PerconaServerMongoDB.psmdb.percona.com)")
+
+			color.New(color.FgGreen).Print("Bind as files: ")
+			fmt.Println("true")
+
+			color.New(color.FgGreen).Print("Detect binding resources: ")
+			fmt.Println("false")
+
+			color.New(color.FgGreen).Println("Available biding information: ")
+			fmt.Println("- /bindings/myapp-mymongo/username")
+			fmt.Println("- /bindings/myapp-mymongo/password")
+			return
+		}
+
+		fmt.Println("ServiceBinding used by the current component:")
+		fmt.Println()
+
+		color.New(color.FgGreen).Print("Service Binding Name: ")
+		color.New(color.FgBlue).Println("myapp-mymongo")
+
+		color.New(color.FgGreen).Print("Service: ")
+		fmt.Println("mymongo (PerconaServerMongoDB.psmdb.percona.com)")
+
+		color.New(color.FgGreen).Print("Bind as files: ")
+		fmt.Println("true")
+
+		color.New(color.FgGreen).Print("Detect binding resources: ")
+		fmt.Println("false")
+
+		color.New(color.FgGreen).Println("Available biding information: ")
+		fmt.Println("- /bindings/myapp-mymongo/username")
+		fmt.Println("- /bindings/myapp-mymongo/password")
+
+		fmt.Println()
+
+		color.New(color.FgGreen).Print("Service Binding Name: ")
+		color.New(color.FgBlue).Println("myapp-mymongo2")
+
+		color.New(color.FgGreen).Print("Service: ")
+		fmt.Println("mymongo (PerconaServerMongoDB.psmdb.percona.com)")
+
+		color.New(color.FgGreen).Print("Bind as files: ")
+		fmt.Println("false")
+
+		color.New(color.FgGreen).Print("Detect binding resources: ")
+		fmt.Println("false")
+
+		color.New(color.FgGreen).Println("Available biding information:")
+		fmt.Println("- PERCONASERVERMONGODB_PASSWORD")
+		fmt.Println("- PERCONASERVERMONGODB_USERNAME")
+
+	},
+}
+
 var listBinding = &cobra.Command{
 	Use:   "binding",
-	Short: "List existing ServiceBindings",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("\"%s\" called", cmd.Short)
-		color.Red("\nNot implemented yet\n")
+	Short: "",
+	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		namespace := "mynamespace"
+
+		headerFmt := color.New(color.FgGreen, color.Underline).SprintfFunc()
+
+		fmt.Printf("ServiceBindings in the %q namespace:\n", namespace)
+		tblSB := table.New("NAME", "Application", "SERVICES ").WithWriter(os.Stdout).WithPadding(2).WithWidthFunc(runewidth.StringWidth)
+		tblSB.WithHeaderFormatter(headerFmt)
+		tblSB.AddRow("backend-mongodb", "backend (Deploment)", "mymongodb (PrconaServerMongoDB.psmdb.percona.com)")
+		tblSB.AddRow("frontend-redis", "frontend (Deployment)", "myredis (Redis.redis.redis.opstreelabs.in)")
+		tblSB.AddRow("otherbinding", "application (Deployment)", "myredis (Redis.redis.redis.opstreelabs.in)")
+		tblSB.Print()
+		return nil
 	},
+	Args: cobra.NoArgs,
 }
 
 func init() {
@@ -398,5 +476,6 @@ func init() {
 
 	createCmd.AddCommand(createBinding)
 	deleteCmd.AddCommand(deleteBinding)
+	describeCmd.AddCommand(describeBinding)
 	listCmd.AddCommand(listBinding)
 }

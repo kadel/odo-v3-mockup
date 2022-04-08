@@ -30,8 +30,16 @@ By default it uses namespace as set by kubectl config.`,
 		tbl.AddRow(" ", "backend", "springboot", "odo", "Dev")
 		tbl.AddRow(" ", "created-by-odc", "python", "unknown", "unknown")
 		tbl.AddRow(" ", "MariaDB", "unknown", "Helm", "unknown")
-
 		tbl.Print()
+		fmt.Println()
+
+		fmt.Printf("ServiceBindings in the %q namespace:\n", namespace)
+		tblSB := table.New("NAME", "Application", "SERVICES ").WithWriter(os.Stdout).WithPadding(2).WithWidthFunc(runewidth.StringWidth)
+		tblSB.WithHeaderFormatter(headerFmt)
+		tblSB.AddRow("backend-mongodb", "backend (Deploment)", "mymongodb (PrconaServerMongoDB.psmdb.percona.com)")
+		tblSB.AddRow("frontend-redis", "frontend (Deployment)", "myredis (Redis.redis.redis.opstreelabs.in)")
+		tblSB.AddRow("otherbinding", "application (Deployment)", "myredis (Redis.redis.redis.opstreelabs.in)")
+		tblSB.Print()
 		return nil
 	},
 	Args: cobra.NoArgs,
